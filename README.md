@@ -11,7 +11,7 @@ Questo è un programma Python che ti permette di tenere traccia delle scommesse 
 3. Naviga nella directory del progetto.
 5. pip install ttkthemes
 6. pip install tkinter
-4. Esegui il programma utilizzando il comando python Operazione_Vark.py.
+4. Esegui il programma utilizzando il comando python Programma_Vark_full.py.
 ## Utilizzo
 1. Avvia il programma eseguendo python Programma_Vark_full.py.
 2. Segui le istruzioni visualizzate sullo schermo per aggiungere nuove scommesse, visualizzare un riepilogo delle scommesse fatte o controllare lo stato di una scommessa specifica.
