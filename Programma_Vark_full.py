@@ -21,6 +21,9 @@ class ApplicazioneScommesse(ThemedTk):
         self.btn_inserisci_scommessa = ttk.Button(self, text="Inserisci una scommessa", command=self.inserisci_scommessa)
         self.btn_inserisci_scommessa.pack(pady=5)
 
+        self.btn_modifica_scommessa = ttk.Button(self, text="Modifica una scommessa", command=self.modifica_scommessa)
+        self.btn_modifica_scommessa.pack(pady=5)
+
         self.btn_mostra_storico = ttk.Button(self, text="Mostra storico delle scommesse", command=self.mostra_storico)
         self.btn_mostra_storico.pack(pady=5)
 
@@ -53,27 +56,37 @@ class ApplicazioneScommesse(ThemedTk):
         btn_conferma = ttk.Button(inserimento_window, text="Conferma", command=lambda: self.conferma_scommessa(inserimento_window, entry_importo.get(), entry_risultato.get()))
         btn_conferma.grid(row=2, column=0, columnspan=2, padx=5, pady=5)
 
-    def conferma_scommessa(self, inserimento_window, importo, risultato):
-        inserimento_window.destroy()  # Chiudiamo la finestra di inserimento
-        try:
-            importo = float(importo)
-        except ValueError:
-            messagebox.showerror("Errore", "L'importo deve essere un numero.")
-            return
+    def modifica_scommessa(self):
+        # Creiamo una finestra per la modifica della scommessa
+        modifica_window = tk.Toplevel(self)
+        modifica_window.title("Modifica Scommessa")
 
-        if risultato.lower() not in ['vincita', 'perdita']:
-            messagebox.showerror("Errore", "Il risultato deve essere 'vincita' o 'perdita'.")
-            return
+        lbl_id = ttk.Label(modifica_window, text="ID della scommessa da modificare:")
+        lbl_id.grid(row=0, column=0, padx=5, pady=5)
+        entry_id = ttk.Entry(modifica_window)
+        entry_id.grid(row=0, column=1, padx=5, pady=5)
 
-        # Otteniamo la data attuale
-        data = datetime.now().strftime('%d-%m-%Y')
+        lbl_importo = ttk.Label(modifica_window, text="Nuovo importo:")
+        lbl_importo.grid(row=1, column=0, padx=5, pady=5)
+        entry_importo = ttk.Entry(modifica_window)
+        entry_importo.grid(row=1, column=1, padx=5, pady=5)
 
-        # Eseguiamo l'inserimento della scommessa nel database
+        lbl_risultato = ttk.Label(modifica_window, text="Nuovo risultato (vincita/perdita):")
+        lbl_risultato.grid(row=2, column=0, padx=5, pady=5)
+        entry_risultato = ttk.Entry(modifica_window)
+        entry_risultato.grid(row=2, column=1, padx=5, pady=5)
+
+        btn_conferma = ttk.Button(modifica_window, text="Conferma", command=lambda: self.conferma_modifica(modifica_window, entry_id.get(), entry_importo.get(), entry_risultato.get()))
+        btn_conferma.grid(row=3, column=0, columnspan=2, padx=5, pady=5)
+
+    def conferma_scommessa(self, window, importo, risultato):
+        data = datetime.now().strftime('%d-%m-%Y')  # Utilizzo la data attuale nel formato italiano
+
         conn = sqlite3.connect('scommesse.db')
         c = conn.cursor()
         if risultato == 'vincita':
             vincita_reale = float(input("Inserisci l'importo della vincita reale: "))
-            differenza = vincita_reale - importo
+            differenza = vincita_reale - float(importo)
         else:
             vincita_reale = 0
             differenza = 0
@@ -82,6 +95,17 @@ class ApplicazioneScommesse(ThemedTk):
         conn.close()
 
         messagebox.showinfo("Successo", "Scommessa registrata.")
+        window.destroy()
+
+    def conferma_modifica(self, window, id_scommessa, importo, risultato):
+        conn = sqlite3.connect('scommesse.db')
+        c = conn.cursor()
+        c.execute('''UPDATE scommesse SET importo=?, risultato=? WHERE id=?''', (importo, risultato, id_scommessa))
+        conn.commit()
+        conn.close()
+
+        messagebox.showinfo("Successo", "Scommessa modificata.")
+        window.destroy()
 
     def mostra_storico(self):
         conn = sqlite3.connect('scommesse.db')
