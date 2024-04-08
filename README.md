@@ -7,8 +7,10 @@ Questo è un programma Python che ti permette di tenere traccia delle scommesse 
 - Puoi visualizzare un riepilogo delle tue scommesse e controllare lo stato attuale di ciascuna scommessa.
 ## Installazione
 1. Assicurati di avere Python installato sul tuo sistema. Puoi scaricare Python dal sito ufficiale.
-2. Clona o scarica il repository su GitHub.
+2. Clona o scarica il repository su GitHub. (git clone http del progetto)
 3. Naviga nella directory del progetto.
+5. pip install ttkthemes
+6. pip install tkinter
 4. Esegui il programma utilizzando il comando python Operazione_Vark.py.
 ## Utilizzo
 1. Avvia il programma eseguendo python Programma_Vark_full.py.

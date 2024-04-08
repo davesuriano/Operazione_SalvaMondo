@@ -1,26 +1,113 @@
-import sqlite3
+import tkinter as tk
+from tkinter import ttk, messagebox
 from datetime import datetime
+import sqlite3
+from ttkthemes import ThemedTk
 
-def crea_tabella_scommesse():
-    conn = sqlite3.connect('scommesse.db')
-    c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS scommesse
-                 (id INTEGER PRIMARY KEY AUTOINCREMENT, importo REAL, vincita_reale REAL, risultato TEXT, data TEXT, differenza REAL)''')
-    conn.commit()
-    conn.close()
+class ApplicazioneScommesse(ThemedTk):
+    def __init__(self):
+        super().__init__()
+        self.set_theme("breeze")  # Scegliamo uno stile tematico per la finestra
+        self.title("Gestione Scommesse Sportive")
+        self.geometry("800x500")
 
-def inserisci_scommessa(importo, risultato, data):
-    conn = sqlite3.connect('scommesse.db')
-    c = conn.cursor()
-    if risultato == 'vincita':
-        vincita_reale = float(input("Inserisci l'importo della vincita reale: "))
-        differenza = vincita_reale - importo
-    else:
-        vincita_reale = 0
-        differenza = 0
-    c.execute('''INSERT INTO scommesse (importo, vincita_reale, risultato, data, differenza) VALUES (?, ?, ?, ?, ?)''', (importo, vincita_reale, risultato, data, differenza))
-    conn.commit()
-    conn.close()
+        self.crea_interfaccia()
+        self.crea_tabella_scommesse()
+
+    def crea_interfaccia(self):
+        self.lbl_benvenuto = ttk.Label(self, text="Benvenuto!", font=("Helvetica", 18))
+        self.lbl_benvenuto.pack(pady=10)
+
+        self.btn_inserisci_scommessa = ttk.Button(self, text="Inserisci una scommessa", command=self.inserisci_scommessa)
+        self.btn_inserisci_scommessa.pack(pady=5)
+
+        self.btn_mostra_storico = ttk.Button(self, text="Mostra storico delle scommesse", command=self.mostra_storico)
+        self.btn_mostra_storico.pack(pady=5)
+
+        self.btn_esci = ttk.Button(self, text="Esci", command=self.quit)
+        self.btn_esci.pack(pady=5)
+
+    def crea_tabella_scommesse(self):
+        conn = sqlite3.connect('scommesse.db')
+        c = conn.cursor()
+        c.execute('''CREATE TABLE IF NOT EXISTS scommesse
+                     (id INTEGER PRIMARY KEY AUTOINCREMENT, importo REAL, vincita_reale REAL, risultato TEXT, data TEXT, differenza REAL)''')
+        conn.commit()
+        conn.close()
+
+    def inserisci_scommessa(self):
+        # Creiamo una finestra per l'inserimento della scommessa
+        inserimento_window = tk.Toplevel(self)
+        inserimento_window.title("Inserisci Scommessa")
+
+        lbl_importo = ttk.Label(inserimento_window, text="Importo:")
+        lbl_importo.grid(row=0, column=0, padx=5, pady=5)
+        entry_importo = ttk.Entry(inserimento_window)
+        entry_importo.grid(row=0, column=1, padx=5, pady=5)
+
+        lbl_risultato = ttk.Label(inserimento_window, text="Risultato (vincita/perdita):")
+        lbl_risultato.grid(row=1, column=0, padx=5, pady=5)
+        entry_risultato = ttk.Entry(inserimento_window)
+        entry_risultato.grid(row=1, column=1, padx=5, pady=5)
+
+        btn_conferma = ttk.Button(inserimento_window, text="Conferma", command=lambda: self.conferma_scommessa(inserimento_window, entry_importo.get(), entry_risultato.get()))
+        btn_conferma.grid(row=2, column=0, columnspan=2, padx=5, pady=5)
+
+    def conferma_scommessa(self, inserimento_window, importo, risultato):
+        inserimento_window.destroy()  # Chiudiamo la finestra di inserimento
+        try:
+            importo = float(importo)
+        except ValueError:
+            messagebox.showerror("Errore", "L'importo deve essere un numero.")
+            return
+
+        if risultato.lower() not in ['vincita', 'perdita']:
+            messagebox.showerror("Errore", "Il risultato deve essere 'vincita' o 'perdita'.")
+            return
+
+        # Otteniamo la data attuale
+        data = datetime.now().strftime('%d-%m-%Y')
+
+        # Eseguiamo l'inserimento della scommessa nel database
+        conn = sqlite3.connect('scommesse.db')
+        c = conn.cursor()
+        if risultato == 'vincita':
+            vincita_reale = float(input("Inserisci l'importo della vincita reale: "))
+            differenza = vincita_reale - importo
+        else:
+            vincita_reale = 0
+            differenza = 0
+        c.execute('''INSERT INTO scommesse (importo, vincita_reale, risultato, data, differenza) VALUES (?, ?, ?, ?, ?)''', (importo, vincita_reale, risultato, data, differenza))
+        conn.commit()
+        conn.close()
+
+        messagebox.showinfo("Successo", "Scommessa registrata.")
+
+    def mostra_storico(self):
+        conn = sqlite3.connect('scommesse.db')
+        c = conn.cursor()
+        c.execute('''SELECT * FROM scommesse''')
+        storico = c.fetchall()
+        conn.close()
+
+        if storico:
+            saldo_giornaliero = 0
+            saldo_totale = 200  # Budget iniziale di 200 euro
+            storico_window = tk.Toplevel(self)
+            storico_window.title("Storico delle scommesse")
+            tree = ttk.Treeview(storico_window)
+            tree["columns"] = ("ID", "Importo", "Vincita reale", "Risultato", "Data", "Saldo giornaliero", "Saldo totale")
+            tree.heading("#0", text="")
+            tree.column("#0", minwidth=0, width=0, stretch=tk.NO)
+            for col in tree["columns"]:
+                tree.heading(col, text=col)
+            for scommessa in storico:
+                saldo_giornaliero = calcola_saldo_giornaliero(scommessa[4])  # La data è nella quinta colonna
+                saldo_totale = calcola_saldo_totale()
+                tree.insert("", "end", text="", values=(scommessa[0], scommessa[1], scommessa[2], scommessa[3], scommessa[4], saldo_giornaliero, saldo_totale))
+            tree.pack(fill="both", expand=True)
+        else:
+            messagebox.showinfo("Storico delle scommesse", "Nessuna scommessa effettuata.")
 
 def calcola_saldo_giornaliero(data):
     conn = sqlite3.connect('scommesse.db')
@@ -39,46 +126,6 @@ def calcola_saldo_totale():
     saldo_totale += 200  # Aggiungiamo il budget iniziale di 200 euro
     return "{:.2f}".format(saldo_totale) if saldo_totale is not None else 0
 
-def mostra_storico():
-    conn = sqlite3.connect('scommesse.db')
-    c = conn.cursor()
-    c.execute('''SELECT * FROM scommesse''')
-    storico = c.fetchall()
-    conn.close()
-    return storico
-
-def main():
-    crea_tabella_scommesse()
-    
-    while True:
-        print("\nGestione scommesse sportive:")
-        print("1. Inserisci una scommessa")
-        print("2. Mostra storico delle scommesse")
-        print("3. Esci")
-
-        scelta = input("Scegli un'opzione: ")
-
-        if scelta == '1':
-            importo = float(input("Inserisci l'importo della scommessa: "))
-            risultato = input("Inserisci il risultato della scommessa (vincita/perdita): ").lower()
-            data = datetime.now().strftime('%d-%m-%Y')  # Utilizzo la data attuale nel formato italiano
-            inserisci_scommessa(importo, risultato, data)
-            print("Scommessa registrata.")
-        elif scelta == '2':
-            storico = mostra_storico()
-            if storico:
-                for scommessa in storico:
-                    saldo_giornaliero = calcola_saldo_giornaliero(scommessa[4])  # La data è nella quinta colonna
-                    saldo_totale = calcola_saldo_totale()
-                    print(f"ID: {scommessa[0]}, Importo: {scommessa[1]}, Vincita reale: {scommessa[2]}, Risultato: {scommessa[3]}, Data: {scommessa[4]}, Saldo giornaliero: {saldo_giornaliero}, Saldo totale: {saldo_totale}")
-            else:
-                print("Nessuna scommessa effettuata.")
-        elif scelta == '3':
-            print("Grazie per aver utilizzato l'applicazione. Arrivederci!")
-            break
-        else:
-            print("Opzione non valida. Riprova.")
-
-
 if __name__ == "__main__":
-    main()
+    app = ApplicazioneScommesse()
+    app.mainloop()
